@@ -1,44 +1,29 @@
-import cv2
 import numpy as np
-import matplotlib.pyplot as plt
+import random
+import math
+import cv2
 
 
-file_path = "examples/pexels.jpg"
-img = cv2.imread(file_path)
-img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+def euclidean_distance(a, b):
+    return np.linalg.norm(a - b)
 
 
-def resize(image, width=None, height=None, scale=1):
-    # Resizes an RGB image.
-    if width is None or height is None:
-        width, height = image_width_height(image)
-        width = int(width * scale)
-        height = int(height * scale)
-    return cv2.resize(image, (width, height))
+def init_centroids(X, k):
+    n_samples, n_features = X.shape
+    centroids = np.zeros((k, n_features))
+    for i in range(k):
+        centroid = X[random.randint(0, n_samples - 1)]
+        centroids[i] = centroid
+    return centroids
 
 
-def image_width_height(image):
-    # Get an RGB image's width and height.
-    width = image.shape[1]
-    height = image.shape[0]
-    return width, height
-
-
-def image2X(image, width, height, channels=3):
-    # Converts an RGB image to an array X for use with sklearn.
-    return image.reshape([width * height, channels])
-
-
-def X2image(X, width, height, channels=3):
-    # Converts an array X from sklearn to an RGB image.
-    return X.reshape([height, width, channels])
-
-
-# Resize the image to a 400 x 600 resolution.
-img = resize(img, width=400, height=600)
-width, height = image_width_height(img)
-
-X = image2X(img, width, height, 3)
+def closest_centroid(sample, centroids):
+    closest, min_distance = -1, math.inf
+    for i, centroid in enumerate(centroids):
+        distance = euclidean_distance(sample, centroid)
+        if distance < min_distance:
+            closest, min_distance = i, distance
+    return closest
 
 
 def k_means_clustering(X, k, max_iterations=100):
@@ -72,14 +57,25 @@ def k_means_clustering(X, k, max_iterations=100):
     return centroids, labels
 
 
-# Convert the numpy array into an RGB image.
-centroids, labels = k_means_clustering(X, 16)
-img_segmented = X2image(centroids[labels], width, height, 3)
+def reduce_colors(image, k):
+    image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+    pixels = np.float32(image.reshape(-1, 3))
 
-# Visualize the original image with the segmented one.
-plt.figure(figsize=[10, 10])
-plt.subplot(1, 2, 1)
-plt.imshow(img)
-plt.subplot(1, 2, 2)
-plt.imshow(img_segmented)
-plt.show()
+    centroids, labels = k_means_clustering(pixels, k)
+
+    new_pixels = np.uint8(centroids[labels].reshape(image.shape))
+
+    return cv2.cvtColor(new_pixels, cv2.COLOR_RGB2BGR)
+
+
+def main():
+    image = cv2.imread('examples/lenna.jpg')
+
+    reduced_color_image = reduce_colors(image, k=16)
+
+    cv2.imwrite('original.jpg', image)
+    cv2.imwrite('reduced.jpg', reduced_color_image)
+
+
+if __name__ == '__main__':
+    main()
