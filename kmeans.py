@@ -2,6 +2,21 @@ import numpy as np
 import random
 import math
 import cv2
+import argparse
+import matplotlib.pyplot as plt
+
+
+# parse cli args
+parser = argparse.ArgumentParser(
+    prog='K-Means Color Reduction',
+    description='Reduces the number of colors of an image using the K-Means algorithm')
+
+parser.add_argument("-i", "--input", help="Input image", required=True)
+
+parser.add_argument("-k", "--clusters",
+                    help="Number of clusters", type=int, required=True)
+parser.add_argument("--maxiter", help="Max number of iterations", type=int)
+args = parser.parse_args()
 
 
 def euclidean_distance(a, b):
@@ -61,7 +76,11 @@ def reduce_colors(image, k):
     image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
     pixels = np.float32(image.reshape(-1, 3))
 
-    centroids, labels = k_means_clustering(pixels, k)
+    if args.maxiter:
+        centroids, labels = k_means_clustering(
+            pixels, args.clusters, max_iterations=args.maxiter)
+    else:
+        centroids, labels = k_means_clustering(pixels, args.clusters)
 
     new_pixels = np.uint8(centroids[labels].reshape(image.shape))
 
@@ -69,8 +88,8 @@ def reduce_colors(image, k):
 
 
 def main():
-    image = cv2.imread('examples/lenna.jpg')
-
+    file_path = args.input
+    image = cv2.imread(file_path)
     reduced_color_image = reduce_colors(image, k=16)
 
     cv2.imwrite('original.jpg', image)
